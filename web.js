@@ -7,15 +7,8 @@ var app = express.createServer(express.logger());
 app.get('/', function(request, response) {
 
   /* read the file index.html*/
-  var buff = fs.readFileSync('index.html', function (err, data) {
-      if (err) throw err;
-      console.log(data);
-  });
-
-
-
-
-  var str = buff.toString('utf8',0,buff.length);  
+  var buff = fs.readFileSync('index.html');
+  var str  = buff.toString('utf8',0,buff.length);  
 
   response.send(str);
 
