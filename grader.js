@@ -12,7 +12,7 @@ References:
    - http://maxogden.com/scraping-with-node.html
 
  + commander.js
-   - https://github.com/visionmedia/commander.js
+!  - https://github.com/visionmedia/commander.js
    - http://tjholowaychuk.com/post/9103188408/commander-js-nodejs-command-line-interfaces-made-easy
 
  + JSON
@@ -21,31 +21,35 @@ References:
    - https://developer.mozilla.org/en-US/docs/JSON#JSON_in_Firefox_2
 */
 
-var fs = require('fs');
+var fs      = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
+var sys     = require('util');
+var rest    = require('restler');
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
 
 var assertFileExists = function(infile) {
     var instr = infile.toString();
-    if(!fs.existsSync(instr)) {
+  /*  if(!fs.existsSync(instr)) {
         console.log("%s does not exist. Exiting.", instr);
         process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
-    }
+    }*/
     return instr;
 };
 
-var cheerioHtmlFile = function(htmlfile) {
-    return cheerio.load(fs.readFileSync(htmlfile));
+var cheerioHtmlFile = function(html_source) {
+
+
+    return cheerio.load( html_source );
 };
 
 var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
 };
 
-var checkHtmlFile = function(htmlfile, checksfile) {
-    $ = cheerioHtmlFile(htmlfile);
+var checkHtmlFile = function(html_source, checksfile) {
+    $ = cheerioHtmlFile(html_source);
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
@@ -66,9 +70,29 @@ if(require.main == module) {
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+
+
+    // get the website by async request
+    rest.get(program.file).on('complete', function(result) {
+	if (result instanceof Error) {
+	    console.log('ERROR')
+	    sys.puts('Error: ' + result.message);
+	    this.retry(5000); // try again after 5 sec
+	} else {
+
+	    //console.log(result);
+
+	    //var html_source = result
+	    var checkJson = checkHtmlFile( result , program.checks);
+	    var outJson = JSON.stringify(checkJson, null, 4);
+	    console.log(outJson);
+	    //console.log('ERROR')
+	    //sys.puts(result);
+	    //return cheerio.load(result);
+	}
+    });
+
+    
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
